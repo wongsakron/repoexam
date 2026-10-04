@@ -14,5 +14,10 @@ fi
 chmod +x deploy/*.sh
 job="0 3 * * * $HOME/exam/deploy/backup.sh >> $HOME/exam/backups/backup.log 2>&1"
 mkdir -p backups
-( crontab -l 2>/dev/null | grep -v 'exam/deploy/backup.sh' ; echo "$job" ) | crontab -
+tmp=$(mktemp)
+# crontab -l fails when the user has no crontab yet; that's fine
+crontab -l 2>/dev/null | grep -v 'exam/deploy/backup.sh' > "$tmp" || true
+echo "$job" >> "$tmp"
+crontab "$tmp"
+rm -f "$tmp"
 echo "backup cron installed"

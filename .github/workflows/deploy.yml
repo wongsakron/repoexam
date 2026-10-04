@@ -18,8 +18,8 @@ jobs:
       run:
         working-directory: web
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -42,7 +42,7 @@ jobs:
       TARGET: ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}
       WEB_PORT: ${{ vars.WEB_PORT || '3000' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Configure SSH
         env:
