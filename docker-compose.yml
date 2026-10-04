@@ -1,0 +1,35 @@
+# Production stack: Next.js app + PostgreSQL.
+# Needs a .env next to this file with DB_PASSWORD (and optionally WEB_PORT). See .env.example.
+name: exam
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: exam
+      POSTGRES_USER: exam
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    # no ports: the database is only reachable from the web container
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U exam -d exam"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  web:
+    build: ./web
+    image: exam-web:latest
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://exam:${DB_PASSWORD}@db:5432/exam
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:

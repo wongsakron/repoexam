@@ -1,0 +1,79 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    name: Check and build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - name: Validate question data and client script
+        run: npm run check
+      - run: npm run build
+
+  deploy:
+    name: Deploy to server
+    needs: build
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: production
+      cancel-in-progress: false
+    env:
+      SSH_HOST: ${{ secrets.SSH_HOST }}
+      TARGET: ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}
+      WEB_PORT: ${{ vars.WEB_PORT || '3000' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure SSH
+        env:
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      - name: Upload files
+        run: |
+          ssh "$TARGET" 'mkdir -p ~/exam'
+          rsync -az --delete web/ "$TARGET:exam/web/"
+          rsync -az --delete deploy/ "$TARGET:exam/deploy/"
+          rsync -az docker-compose.yml .env.example "$TARGET:exam/"
+
+      - name: Build and restart containers
+        run: |
+          ssh "$TARGET" 'set -e
+            cd ~/exam
+            bash deploy/setup-server.sh
+            sudo docker compose up -d --build --remove-orphans
+            sudo docker image prune -f >/dev/null'
+
+      - name: Health check
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS "http://${SSH_HOST}:${WEB_PORT}/api/health"; then echo; exit 0; fi
+            sleep 5
+          done
+          ssh "$TARGET" 'cd ~/exam && sudo docker compose ps && sudo docker compose logs --tail 80 web'
+          exit 1

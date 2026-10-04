@@ -1,0 +1,21 @@
+{
+  "name": "landdept-exam",
+  "version": "1.0.0",
+  "private": true,
+  "description": "คลังข้อสอบและสรุปเนื้อหา นักวิชาการคอมพิวเตอร์ กรมที่ดิน พร้อมบันทึกความคืบหน้าใน PostgreSQL",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "check": "node scripts/check-data.mjs && node --check public/app.js"
+  },
+  "engines": {
+    "node": ">=20.9"
+  },
+  "dependencies": {
+    "next": "^16.3.8",
+    "pg": "^8.23.1",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  }
+}

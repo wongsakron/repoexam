@@ -1,0 +1,28 @@
+# dependencies / builds
+node_modules/
+web/.next/
+dist/
+*.log
+
+# secrets (the real .env lives only on the server)
+.env
+
+# python
+__pycache__/
+
+# pipeline intermediates: text extracted from the tutoring PDFs (rebuildable, large)
+pipeline/lines/
+pipeline/book_txt/
+pipeline/ch_txt/
+pipeline/batches/
+pipeline/real/
+pipeline/flt_*.txt
+pipeline/law2.txt
+pipeline/b14b.txt
+pipeline/book_q.json
+pipeline/raw_prev.json
+
+# local test output
+pipeline/tests/site_t.html
+pipeline/tests/shots/
+pipeline/tests/chprof_*/
