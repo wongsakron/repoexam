@@ -192,26 +192,24 @@ function chapCard(c){
     '<div class="bars">'+st.map(function(s,i){return bar('l'+(i+1),s.n?s.d/s.n:0);}).join('')+'</div>'+
     '<div class="cmeta">'+tot+' ข้อ · ทำแล้ว '+pct(done,tot)+'%</div></div><span class="chev">›</span></a>';
 }
-function optsHTML(){
-  return '<div class="opts"><div class="opt"><span>จำนวนข้อ</span><div class="seg">'+segBtn('n',10,'10')+segBtn('n',20,'20')+segBtn('n',30,'30')+segBtn('n','all','ทั้งหมด')+'</div></div>'+
-    '<div class="opt"><span>ลำดับ</span><div class="seg">'+segBtn('ord','rand','สุ่ม')+segBtn('ord','seq','ตามลำดับ')+'</div></div>'+
-    '<div class="opt"><span>เลือกข้อ</span><div class="seg">'+segBtn('only','all','ทั้งหมด')+segBtn('only','new','ยังไม่เคยทำ')+segBtn('only','wrong','ที่เคยผิด')+'</div></div></div>';
-}
 function viewChap(k){
   var c=CHK[k];if(!c){go('#/');return;}
   var B=BYCH[k],wrong=chAll(k).filter(isWrong),idx=CH.indexOf(c),prev=CH[idx-1],next=CH[idx+1];
   var h=top('#/','เล่ม '+c.b+' · บทที่ '+c.c)+'<div class="wrap">';
   h+='<h1 class="ch1">'+esc(c.title)+'</h1>'+(STAR[k]?'<div class="badge-star">⭐ อยู่ในหลักสูตรสอบกรมที่ดิน</div>':'')+'<p class="note">'+inline(c.note)+'</p>';
   h+='<a class="btn read-btn" href="#/read/'+k+'">📖 อ่านสรุปเนื้อหาบทนี้</a>';
-  h+=optsHTML();
   [1,2,3].forEach(function(l){
-    var s=stat(B[l]);
+    var s=stat(B[l]),f=firstUndone(B[l]),attr=' data-k="'+k+'" data-lv="'+l+'"'+(s.n?'':' disabled');
+    var main=!s.n?'<button class="btn pri" disabled>ไม่มีข้อสอบ</button>':
+      s.d===0?'<button class="btn pri" data-act="lv"'+attr+'>เริ่ม'+LVSHORT[l]+' (ข้อ 1–'+s.n+')</button>':
+      f<0?'<button class="btn pri" data-act="lvre"'+attr+'>ทำครบแล้ว · เริ่มใหม่ข้อ 1</button>':
+      '<button class="btn pri" data-act="lv"'+attr+'>ทำต่อจากข้อ '+(f+1)+'</button>';
     h+='<div class="lvcard l'+l+'"><div class="lvh"><b>'+LVNAME[l]+'</b><span>'+s.n+' ข้อ</span></div><p>'+LVDESC[l]+'</p>'+
        (s.n?'<div class="kinds">'+esc(kindsLine(B[l]))+'</div>':'')+
        '<div class="lvp">'+bar('l'+l,s.n?s.d/s.n:0)+'<small>ทำแล้ว '+s.d+'/'+s.n+(s.d?' · ถูก '+pct(s.ok,s.d)+'%':'')+'</small></div>'+
-       '<button class="btn pri" data-act="lv" data-k="'+k+'" data-lv="'+l+'"'+(s.n?'':' disabled')+'>เริ่ม'+LVSHORT[l]+'</button></div>';
+       '<div class="lvbtns">'+main+'<button class="btn" data-act="lvpick"'+attr+'>☰ เลือกข้อ</button></div></div>';
   });
-  h+='<div class="row2"><button class="btn" data-act="lv" data-k="'+k+'" data-lv="0">🎲 ผสมทุกด่าน</button>'+(wrong.length?'<button class="btn" data-act="wrongch" data-k="'+k+'">🔁 ทบทวนข้อผิด ('+wrong.length+')</button>':'')+'</div>';
+  h+='<div class="row2"><button class="btn" data-act="lv" data-k="'+k+'" data-lv="0">ทำทุกด่านต่อกัน ('+chAll(k).length+' ข้อ)</button>'+(wrong.length?'<button class="btn" data-act="wrongch" data-k="'+k+'">🔁 ทบทวนข้อผิด ('+wrong.length+')</button>':'')+'</div>';
   h+='<div class="cnav">'+(prev?'<a class="btn sm" href="#/ch/'+prev.k+'">‹ เล่ม '+prev.b+' บท '+prev.c+'</a>':'')+(next?'<a class="btn sm" href="#/ch/'+next.k+'">เล่ม '+next.b+' บท '+next.c+' ›</a>':'')+'</div>';
   app.innerHTML=h+'</div>';
 }
@@ -228,29 +226,35 @@ function viewRead(k){
 }
 
 /* ---------- practice session ---------- */
-function filterOnly(pool){
-  if(S.o.only==='new')return pool.filter(function(q){return !isDone(q);});
-  if(S.o.only==='wrong')return pool.filter(isWrong);
-  return pool;
+// every level is done in full, in book order; re-entering resumes at the first question not yet answered
+function firstUndone(list){for(var i=0;i<list.length;i++)if(!isDone(list[i]))return i;return -1;}
+function startLevel(k,lv,mode){ // mode: undefined = resume, 'restart' = from question 1, 'pick' = open the question grid
+  var c=CHK[k],pool=lv?BYCH[k][lv]:chAll(k);
+  if(!pool.length){toast('ไม่มีข้อสอบ');return;}
+  var at=0;
+  if(mode!=='restart'){var f=firstUndone(pool);at=f<0?0:f;}
+  startPrac(pool.map(function(q){return q.id;}),'เล่ม '+c.b+' บท '+c.c+' · '+(lv?LVSHORT[lv]:'ทุกด่าน'),'#/ch/'+k,function(){startLevel(k,lv,'restart');},at,mode==='pick');
+  if(at>0&&mode!=='pick')toast('ทำต่อจากข้อ '+(at+1)+' · กด "เลือกข้อ" เพื่อไปข้อไหนก็ได้');
 }
-function startLevel(k,lv){
-  var c=CHK[k],pool=lv?BYCH[k][lv].slice():chAll(k);
-  pool=filterOnly(pool);
-  if(!pool.length){toast(S.o.only==='new'?'ทำครบทุกข้อในด่านนี้แล้ว ลองเปลี่ยนเป็น "ทั้งหมด"':S.o.only==='wrong'?'ไม่มีข้อที่เคยผิดในด่านนี้':'ไม่มีข้อสอบ');return;}
-  pool=S.o.ord==='rand'?shuffle(pool):pool.sort(function(a,b){return a._i-b._i;});
-  var n=S.o.n==='all'?pool.length:Math.min(+S.o.n,pool.length);
-  startPrac(pool.slice(0,n).map(function(q){return q.id;}),'เล่ม '+c.b+' บท '+c.c+' · '+(lv?LVSHORT[lv]:'ผสมทุกด่าน'),'#/ch/'+k,function(){startLevel(k,lv);});
+function startPrac(ids,title,back,redo,at,grid){SES={ids:ids,i:at||0,ans:{},title:title,back:back,redo:redo,grid:!!grid};go('#/quiz');}
+function pracGrid(){
+  var h='<div class="card" id="pgrid"><div class="legend"><span class="lg ok">■ ถูก</span><span class="lg no">■ ผิด</span><span>□ ยังไม่ทำ</span><span>(ผลครั้งล่าสุด · แตะเลขเพื่อไปข้อนั้น)</span></div><div class="grid">';
+  SES.ids.forEach(function(id,j){var r=S.p[id],cls=r?(r[0]?'ok':'no'):'';h+='<button class="'+cls+(j===SES.i?' cur':'')+'" data-act="pjump" data-i="'+j+'">'+(j+1)+'</button>';});
+  return h+'</div></div>';
 }
-function startPrac(ids,title,back,redo){SES={ids:ids,i:0,ans:{},title:title,back:back,redo:redo};go('#/quiz');}
 function viewQuiz(){
   if(!SES){go('#/');return;}
-  var q=BYID[SES.ids[SES.i]],c=SES.ans[q.id],rev=c!==undefined,n=SES.ids.length;
+  var q=BYID[SES.ids[SES.i]],c=SES.ans[q.id],rev=c!==undefined,n=SES.ids.length,last=SES.i+1>=n;
   var done=0,okc=0;SES.ids.forEach(function(id){var a=SES.ans[id];if(a!==undefined){done++;if(a===BYID[id].a)okc++;}});
-  app.innerHTML='<div class="qbar"><a class="x" href="'+SES.back+'" aria-label="ออกจากแบบฝึก">✕</a><div class="qt">'+esc(SES.title)+'</div><div class="qc">'+(SES.i+1)+'/'+n+'</div></div>'+
-    '<div class="prog"><i style="width:'+(done/n*100)+'%"></i></div>'+
-    '<div class="wrap qwrap"><div class="card q">'+qHTML(q,{chosen:c,reveal:rev})+'</div>'+
-    '<div class="qtools"><button class="lnk" data-act="bm">'+(S.bm[q.id]?'★ เก็บไว้ทบทวนแล้ว':'☆ เก็บไว้ทบทวน')+'</button><span class="score">ถูก '+okc+'/'+done+'</span></div></div>'+
-    '<div class="actbar">'+(rev?'<button class="btn pri big" data-act="next">'+(SES.i+1<n?'ข้อต่อไป →':'ดูผลคะแนน')+'</button>':'<div class="hint">แตะตัวเลือกเพื่อตอบ</div>')+'</div>';
+  var h='<div class="qbar"><a class="x" href="'+SES.back+'" aria-label="ออกจากแบบฝึก">✕</a><div class="qt">'+esc(SES.title)+'</div><div class="qc">'+(SES.i+1)+'/'+n+'</div></div>'+
+    '<div class="prog"><i style="width:'+((SES.i+1)/n*100)+'%"></i></div><div class="wrap qwrap">'+
+    '<div class="qnav"><button class="btn sm" data-act="pgrid">'+(SES.grid?'ซ่อนตารางข้อ':'☰ เลือกข้อ')+'</button><span class="score">รอบนี้ตอบ '+done+' · ถูก '+okc+'</span></div>';
+  if(SES.grid)h+=pracGrid();
+  h+='<div class="card q">'+qHTML(q,{chosen:c,reveal:rev})+'</div>'+
+    '<div class="qtools"><button class="lnk" data-act="bm">'+(S.bm[q.id]?'★ เก็บไว้ทบทวนแล้ว':'☆ เก็บไว้ทบทวน')+'</button><button class="lnk" data-act="pfinish">จบและดูผล</button></div></div>'+
+    '<div class="actbar"><button class="btn" data-act="pprev"'+(SES.i?'':' disabled')+'>← ก่อนหน้า</button>'+
+    '<button class="btn'+(rev?' pri':'')+'" data-act="next">'+(last?'ดูผลคะแนน':rev?'ข้อต่อไป →':'ข้าม →')+'</button></div>';
+  app.innerHTML=h;
 }
 function pracChoose(i){
   var q=BYID[SES.ids[SES.i]];if(SES.ans[q.id]!==undefined||i>=q.ch.length)return;
@@ -266,7 +270,7 @@ function viewResult(){
   SES.ids.forEach(function(id){var a=SES.ans[id];if(a!==undefined){done++;if(a===BYID[id].a)ok++;else wrong.push(id);}});
   var p=pct(ok,done),msg=p>=80?'ยอดเยี่ยม พร้อมไปด่านต่อไป':p>=60?'ผ่านเกณฑ์ ทบทวนข้อผิดอีกนิด':'ควรกลับไปอ่านสรุปบทนี้อีกรอบ';
   var h=top(SES.back,'ผลคะแนน')+'<div class="wrap"><div class="card res"><div class="muted">'+esc(SES.title)+'</div><div class="big">'+ok+'<small> / '+done+'</small></div><div class="msg '+(p>=60?'pass':'fail')+'">'+p+'% · '+msg+'</div></div>';
-  h+='<div class="row2">'+(wrong.length?'<button class="btn pri" data-act="redowrong">ทำข้อผิดอีกรอบ ('+wrong.length+')</button>':'')+(SES.redo?'<button class="btn" data-act="redo">ทำชุดใหม่</button>':'')+'<a class="btn" href="'+SES.back+'">กลับ</a></div>';
+  h+='<div class="row2">'+(wrong.length?'<button class="btn pri" data-act="redowrong">ทำข้อผิดอีกรอบ ('+wrong.length+')</button>':'')+(SES.redo?'<button class="btn" data-act="redo">เริ่มใหม่ตั้งแต่ข้อ 1</button>':'')+'<a class="btn" href="'+SES.back+'">กลับ</a></div>';
   if(wrong.length){h+='<div class="sec"><h2>ข้อที่ตอบผิด</h2></div>';wrong.forEach(function(id,j){h+=reviewItem(BYID[id],SES.ids.indexOf(id)+1,SES.ans[id],false);});}
   app.innerHTML=h+'</div>';
 }
@@ -279,7 +283,7 @@ function viewReview(tab){
   var h=top('#/','ทบทวน')+'<div class="wrap"><div class="tabs"><a class="chip'+(tab==='wrong'?' on':'')+'" href="#/review">ข้อที่ยังผิด ('+wN+')</a><a class="chip'+(tab==='bm'?' on':'')+'" href="#/review/bm">★ ที่เก็บไว้ ('+bN+')</a></div>';
   if(!list.length){h+='<div class="empty">'+(tab==='bm'?'ยังไม่มีข้อที่เก็บไว้ กด ☆ ระหว่างทำข้อสอบเพื่อเก็บข้อที่อยากกลับมาดู':'ยังไม่มีข้อผิดค้างอยู่ เก่งมาก')+'</div>';app.innerHTML=h+'</div>';return;}
   h+='<p class="muted" style="font-size:.9rem">'+(tab==='wrong'?'ข้อที่ตอบผิดในครั้งล่าสุด ถ้าตอบถูกในรอบทบทวน ข้อนั้นจะหายไปจากรายการนี้':'ข้อที่กดเก็บไว้ระหว่างทำ')+'</p>';
-  h+='<button class="btn pri full" data-act="revall" data-tab="'+tab+'">ทำทั้งหมดแบบสุ่ม ('+list.length+' ข้อ)</button>';
+  h+='<button class="btn pri full" data-act="revall" data-tab="'+tab+'">ทำทั้งหมดเรียงตามลำดับ ('+list.length+' ข้อ)</button>';
   var byc={};list.forEach(function(q){(byc[q._k]=byc[q._k]||[]).push(q);});
   h+='<div class="sec"><h2>แยกตามบท</h2></div><div class="row2">';
   CH.forEach(function(c){if(byc[c.k])h+='<button class="chip" data-act="revch" data-tab="'+tab+'" data-k="'+c.k+'">เล่ม '+c.b+' บท '+c.c+' · '+byc[c.k].length+'</button>';});
@@ -428,13 +432,19 @@ function route(){
 var ACT={
   fs:function(){S.o.fs=S.o.fs?0:1;save();api('settings',{o:S.o});route();},
   lv:function(t){startLevel(t.dataset.k,+t.dataset.lv);},
-  wrongch:function(t){var k=t.dataset.k,l=shuffle(chAll(k).filter(isWrong));startPrac(l.map(function(q){return q.id;}),'ทบทวนข้อผิด · เล่ม '+CHK[k].b+' บท '+CHK[k].c,'#/ch/'+k,null);},
+  lvre:function(t){startLevel(t.dataset.k,+t.dataset.lv,'restart');},
+  lvpick:function(t){startLevel(t.dataset.k,+t.dataset.lv,'pick');},
+  pgrid:function(){SES.grid=!SES.grid;viewQuiz();if(SES.grid){var g=document.getElementById('pgrid');if(g)g.scrollIntoView({behavior:'smooth',block:'nearest'});}},
+  pjump:function(t){SES.i=+t.dataset.i;SES.grid=false;viewQuiz();window.scrollTo(0,0);},
+  pprev:function(){if(SES.i>0){SES.i--;viewQuiz();window.scrollTo(0,0);}},
+  pfinish:function(){go('#/result');},
+  wrongch:function(t){var k=t.dataset.k,l=chAll(k).filter(isWrong);startPrac(l.map(function(q){return q.id;}),'ทบทวนข้อผิด · เล่ม '+CHK[k].b+' บท '+CHK[k].c,'#/ch/'+k,null);},
   next:function(){pracNext();},
   bm:function(){var q=BYID[SES.ids[SES.i]];if(S.bm[q.id])delete S.bm[q.id];else S.bm[q.id]=1;save();api('bookmark',{qid:q.id,on:!!S.bm[q.id]});viewQuiz();},
   redo:function(){if(SES&&SES.redo)SES.redo();},
-  redowrong:function(){var w=SES.ids.filter(function(id){var a=SES.ans[id];return a!==undefined&&a!==BYID[id].a;});startPrac(shuffle(w),'ทำข้อผิดอีกรอบ',SES.back,null);},
-  revall:function(t){var l=shuffle(revList(t.dataset.tab));startPrac(l.map(function(q){return q.id;}),t.dataset.tab==='bm'?'ทบทวนข้อที่เก็บไว้':'ทบทวนข้อผิดทั้งหมด','#/review'+(t.dataset.tab==='bm'?'/bm':''),null);},
-  revch:function(t){var k=t.dataset.k,l=shuffle(revList(t.dataset.tab,k));startPrac(l.map(function(q){return q.id;}),'ทบทวน · เล่ม '+CHK[k].b+' บท '+CHK[k].c,'#/review'+(t.dataset.tab==='bm'?'/bm':''),null);},
+  redowrong:function(){var w=SES.ids.filter(function(id){var a=SES.ans[id];return a!==undefined&&a!==BYID[id].a;});startPrac(w,'ทำข้อผิดอีกรอบ',SES.back,null);},
+  revall:function(t){var l=revList(t.dataset.tab);startPrac(l.map(function(q){return q.id;}),t.dataset.tab==='bm'?'ทบทวนข้อที่เก็บไว้':'ทบทวนข้อผิดทั้งหมด','#/review'+(t.dataset.tab==='bm'?'/bm':''),null);},
+  revch:function(t){var k=t.dataset.k,l=revList(t.dataset.tab,k);startPrac(l.map(function(q){return q.id;}),'ทบทวน · เล่ม '+CHK[k].b+' บท '+CHK[k].c,'#/review'+(t.dataset.tab==='bm'?'/bm':''),null);},
   setp:function(t){var s=buildSets()[+t.dataset.i];startPrac(s.ids.slice(),s.name,'#/sets',null);},
   setm:function(t){var s=buildSets()[+t.dataset.i];if(MOCK&&MOCK.state==='run'&&!confirm('มีการสอบที่ยังทำค้างอยู่ จะเริ่มชุดใหม่แทนหรือไม่?'))return;startMock(s.ids.slice(),s.name,Math.max(5,Math.round(s.ids.length*1.2)),'#/sets');},
   srquiz:function(){startPrac(SR.slice(0,50).map(function(q){return q.id;}),'ข้อที่ค้นเจอ: '+lastSearch,'#/search',null);},
@@ -447,7 +457,7 @@ var ACT={
   msubmit:function(){submitMock(false);},
   mrv:function(t){MOCK.rv=t.dataset.v;mockResult();},
   mnew:function(){var back=MOCK.back;MOCK=null;go(back);},
-  mwrong:function(){var M=MOCK,w=M.ids.filter(function(id){return M.ans[id]!==BYID[id].a;});startPrac(shuffle(w),'ฝึกข้อผิดจากการจำลองสอบ','#/mock',null);},
+  mwrong:function(){var M=MOCK,w=M.ids.filter(function(id){return M.ans[id]!==BYID[id].a;});startPrac(w,'ฝึกข้อผิดจากการจำลองสอบ','#/mock',null);},
   exp:function(){try{var b=new Blob([JSON.stringify(S)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='ความคืบหน้า-ติวกรมที่ดิน.json';document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},800);}catch(e){toast('สำรองไม่สำเร็จในเบราว์เซอร์นี้');}},
   imp:function(){
     if(!confirm('การนำเข้าจะแทนที่ความคืบหน้าปัจจุบันทั้งหมด ต้องการทำต่อหรือไม่?'))return;
@@ -474,7 +484,8 @@ document.addEventListener('keydown',function(e){
   var h=location.hash,n=parseInt(e.key,10);
   if(h.indexOf('#/quiz')===0&&SES){
     if(n>=1&&n<=6){pracChoose(n-1);e.preventDefault();}
-    else if((e.key==='Enter'||e.key==='ArrowRight')&&SES.ans[SES.ids[SES.i]]!==undefined){pracNext();e.preventDefault();}
+    else if(e.key==='ArrowRight'||(e.key==='Enter'&&SES.ans[SES.ids[SES.i]]!==undefined)){pracNext();e.preventDefault();}
+    else if(e.key==='ArrowLeft'){ACT.pprev();e.preventDefault();}
   }else if(h.indexOf('#/mock')===0&&MOCK&&MOCK.state==='run'){
     if(n>=1&&n<=6){mockChoose(n-1);e.preventDefault();}
     else if(e.key==='ArrowRight')ACT.mnext();else if(e.key==='ArrowLeft')ACT.mprev();
