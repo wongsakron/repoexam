@@ -11,7 +11,6 @@ var CH=META.chapters, CHK={}, STAR={}, GROUPS=META.groups, GOF={};
 CH.forEach(function(c){CHK[c.k]=c;});
 META.star.forEach(function(k){STAR[k]=1;});
 GROUPS.forEach(function(g,i){g.chs.forEach(function(k){GOF[k]=i;});});
-var LETTER=['ก','ข','ค','ง','จ','ฉ'];
 var LVNAME={1:'ด่าน 1 · พื้นฐาน',2:'ด่าน 2 · ฝึกฝน',3:'ด่าน 3 · ของจริง'};
 var LVSHORT={1:'ด่าน 1',2:'ด่าน 2',3:'ด่าน 3'};
 var LVDESC={1:'ข้อสอบท้ายบทในเล่มน้ำตาล ใช้เช็กว่าอ่านแล้วจำได้',2:'ข้อสอบเพิ่มเติม ข้อสอบประจำเดือน และโจทย์ฝึกที่เรียบเรียงจากเนื้อหา',3:'ข้อสอบจริงหลายสนาม (สพฐ. กทม. อาชีวะ ท้องถิ่น) และข้อสอบโค้งสุดท้าย'};
@@ -130,13 +129,13 @@ function qHTML(q,st){
     var cls='ch';
     if(st.reveal){if(i===q.a)cls+=' right';else if(i===st.chosen)cls+=' wrong';else cls+=' dim';}
     else if(st.chosen===i)cls+=' sel';
-    h+='<button class="'+cls+'" data-ch="'+i+'"'+(st.reveal?' disabled':'')+'><span class="lt">'+LETTER[i]+'</span><span class="ct">'+(c?esc(c):'<i>ตัวเลือก '+LETTER[i]+' (ดูในภาพ)</i>')+'</span></button>';
+    h+='<button class="'+cls+'" data-ch="'+i+'"'+(st.reveal?' disabled':'')+'><span class="ct">'+(c?esc(c):'<i>ตัวเลือกที่ '+(i+1)+' (ดูในภาพ)</i>')+'</span></button>';
   });
   h+='</div>';
   if(st.reveal){
     var has=typeof st.chosen==='number',ok=has&&st.chosen===q.a;
     var head=has?(ok?'✓ ถูกต้อง · ':'✗ ยังไม่ถูก · '):(st.mock?'ไม่ได้ตอบ · ':'');
-    h+='<div class="exp '+(has?(ok?'ok':'no'):'')+'"><div class="eh">'+head+'เฉลย '+LETTER[q.a]+(q.ch[q.a]?'. '+esc(q.ch[q.a]):'')+'</div><div class="et">'+esc(q.e)+'</div><div class="src">ที่มา: '+esc(srcLabel(q))+' · <a href="#/read/'+q._k+'">อ่านสรุปบทนี้</a></div></div>';
+    h+='<div class="exp '+(has?(ok?'ok':'no'):'')+'"><div class="eh">'+head+'เฉลย '+(q.ch[q.a]?esc(q.ch[q.a]):'ตัวเลือกที่ '+(q.a+1))+'</div><div class="et">'+esc(q.e)+'</div><div class="src">ที่มา: '+esc(srcLabel(q))+' · <a href="#/read/'+q._k+'">อ่านสรุปบทนี้</a></div></div>';
   }
   return h;
 }
