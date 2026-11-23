@@ -18,11 +18,23 @@ GROUPS = [
     {'name': 'อื่นๆ (ไฟล์ กราฟิก เลขฐาน สื่อการสอน วิทยาการคำนวณ)', 'chs': ['1-2', '1-3', '1-6', '1-10', '2-8'], 'w': 5},
 ]
 
+# ชุด 3: แนวสอบกระทรวงการคลัง — one chapter per exam area, weights from the
+# mid-point of the ranges in the MoF preparation guide (must sum to 100)
+MOF_GROUPS = [
+    {'name': 'หมวด 1 เครือข่ายและความมั่นคงปลอดภัยไซเบอร์', 'chs': ['3-1'], 'w': 23},
+    {'name': 'หมวด 2 โครงสร้างพื้นฐานและมาตรฐาน Data Center', 'chs': ['3-2'], 'w': 11},
+    {'name': 'หมวด 3 เครื่องแม่ข่ายและคอมพิวเตอร์ส่วนบุคคล', 'chs': ['3-3'], 'w': 13},
+    {'name': 'หมวด 4 ระบบสารสนเทศและฐานข้อมูล', 'chs': ['3-4'], 'w': 17},
+    {'name': 'หมวด 5 การพัฒนาโปรแกรมและสถาปัตยกรรมซอฟต์แวร์', 'chs': ['3-5'], 'w': 13},
+    {'name': 'หมวด 6 กฎหมายเทคโนโลยีดิจิทัล', 'chs': ['3-6'], 'w': 14},
+    {'name': 'หมวด 7 จริยธรรมข้าราชการและข้อกำหนดจริยธรรม กค.', 'chs': ['3-7'], 'w': 9},
+]
+
 
 def load_chapters():
     """Return (summaries dict, chapter list) from sum/B{b}-{c}.md."""
     summ, chapters = {}, []
-    for b, nc in ((1, 11), (2, 11)):
+    for b, nc in ((1, 11), (2, 11), (3, 7)):
         for c in range(1, nc + 1):
             t = open(os.path.join(HERE, 'sum', f'B{b}-{c}.md'), encoding='utf-8').read()
             lines = t.split('\n')
@@ -31,8 +43,9 @@ def load_chapters():
             summ[f'{b}-{c}'] = t
             chapters.append({'k': f'{b}-{c}', 'b': b, 'c': c, 'title': title, 'note': note})
     keys = {c['k'] for c in chapters}
-    assert sorted(k for g in GROUPS for k in g['chs']) == sorted(keys), 'groups must cover every chapter once'
-    assert sum(g['w'] for g in GROUPS) == 100
+    grouped = [k for g in GROUPS + MOF_GROUPS for k in g['chs']]
+    assert sorted(grouped) == sorted(keys), 'groups must cover every chapter once'
+    assert sum(g['w'] for g in GROUPS) == 100 and sum(g['w'] for g in MOF_GROUPS) == 100
     return summ, chapters
 
 

@@ -11,8 +11,11 @@ var CH=META.chapters, CHK={}, STAR={}, GROUPS=META.groups, GOF={};
 CH.forEach(function(c){CHK[c.k]=c;});
 META.star.forEach(function(k){STAR[k]=1;});
 GROUPS.forEach(function(g,i){g.chs.forEach(function(k){GOF[k]=i;});});
+var MOFG=META.mof_groups||[], GOFM={};
+MOFG.forEach(function(g,i){g.chs.forEach(function(k){GOFM[k]=i;});});
 var LVNAME={1:'ด่าน 1 · พื้นฐาน',2:'ด่าน 2 · ฝึกฝน',3:'ด่าน 3 · ของจริง'};
 var LVSHORT={1:'ด่าน 1',2:'ด่าน 2',3:'ด่าน 3'};
+var LVDESC3={1:'ข้อระดับง่าย ทวนนิยาม ตัวเลข และศัพท์สำคัญจากคู่มือเตรียมสอบ',2:'ข้อระดับกลาง เปรียบเทียบเทคโนโลยีที่คล้ายกัน คำนวณ และจับคู่แนวคิด',3:'ข้อระดับยาก วิเคราะห์สถานการณ์จำลองและกับดักที่ออกสอบบ่อย'};
 var LVDESC={1:'ข้อสอบท้ายบทในเล่มน้ำตาล ใช้เช็กว่าอ่านแล้วจำได้',2:'ข้อสอบเพิ่มเติม ข้อสอบประจำเดือน และโจทย์ฝึกที่เรียบเรียงจากเนื้อหา',3:'ข้อสอบจริงหลายสนาม (สพฐ. กทม. อาชีวะ ท้องถิ่น) และข้อสอบโค้งสุดท้าย'};
 var KINDNAME={book:'ท้ายบท',extra:'เพิ่มเติมในเล่ม',monthly:'ประจำเดือน',auth:'โจทย์ฝึก',real:'ข้อสอบจริง',final:'โค้งสุดท้าย'};
 var BYID={}, BYCH={};
@@ -59,7 +62,8 @@ function shuffle(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(M
 function go(h){if(location.hash===h)route();else location.hash=h;}
 function toast(msg){var t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(function(){t.remove();},2200);}
 function top(back,title,extra){return '<div class="top"><a class="back" href="'+back+'" aria-label="ย้อนกลับ">‹</a><div class="tt">'+esc(title)+'</div>'+(extra||'')+'</div>';}
-function chapLabel(q){return 'เล่ม '+q.b+' บท '+q.c;}
+function bk(b){return b===3?'ชุดคลัง':'เล่ม '+b;}
+function chapLabel(q){return bk(q.b)+' บท '+q.c;}
 function srcLabel(q){return q.src+(q.page?' · หน้า '+q.page:'');}
 function fmt(ms){ms=Math.max(0,ms);var s=Math.floor(ms/1000),h=Math.floor(s/3600),m=Math.floor(s%3600/60);s=s%60;var p=function(x){return (x<10?'0':'')+x;};return (h?h+':'+p(m):m)+':'+p(s);}
 function bar(cls,f){return '<span class="bar '+cls+'"><i style="width:'+(f*100).toFixed(1)+'%"></i></span>';}
@@ -169,10 +173,11 @@ function viewHome(){
      '<p class="warnbox">หลักสูตรสอบยังมีหัวข้อ <b>ความรู้เกี่ยวกับกรมที่ดิน</b> ซึ่งไม่มีอยู่ในไฟล์ติวชุดนี้ ควรอ่านเพิ่มจากเว็บไซต์กรมที่ดิน เช่น อำนาจหน้าที่ วิสัยทัศน์ และภารกิจของกรม</p>'+
      '<p class="muted" style="font-size:.88rem;margin:0">ความคืบหน้าบันทึกลงฐานข้อมูลบนเซิร์ฟเวอร์ เปิดจากมือถือหรือคอมเครื่องไหนก็เห็นความคืบหน้าเดียวกัน</p></details>';
   h+='<div class="row2" style="margin:14px 0 0"><button class="chip'+(S.o.fs?' on':'')+'" data-act="fs">⭐ แสดงเฉพาะบทในหลักสูตรกรมที่ดิน</button></div>';
-  [1,2].forEach(function(b){
+  [1,2,3].forEach(function(b){
     var list=CH.filter(function(c){return c.b===b&&(!S.o.fs||STAR[c.k]);});
     var cnt=0;CH.forEach(function(c){if(c.b===b)cnt+=chAll(c.k).length;});
-    h+='<div class="sec"><h2>เล่ม '+b+'</h2><small>'+cnt.toLocaleString()+' ข้อ</small></div>';
+    h+='<div class="sec"><h2>'+(b===3?'ชุด 3 · แนวสอบกระทรวงการคลัง':'เล่ม '+b)+'</h2><small>'+cnt.toLocaleString()+' ข้อ</small></div>';
+    if(b===3&&MOFG.length)h+='<a class="btn full" style="margin:0 0 10px" href="#/mockmof">⏱️ จำลองสอบกระทรวงการคลัง · สุ่มตามสัดส่วน 7 หมวด</a>';
     list.forEach(function(c){h+=chapCard(c);});
   });
   h+='<div class="foot"><b>ตั้งค่า</b>'+
@@ -194,7 +199,7 @@ function chapCard(c){
 function viewChap(k){
   var c=CHK[k];if(!c){go('#/');return;}
   var B=BYCH[k],wrong=chAll(k).filter(isWrong),idx=CH.indexOf(c),prev=CH[idx-1],next=CH[idx+1];
-  var h=top('#/','เล่ม '+c.b+' · บทที่ '+c.c)+'<div class="wrap">';
+  var h=top('#/',''+bk(c.b)+' · บทที่ '+c.c)+'<div class="wrap">';
   h+='<h1 class="ch1">'+esc(c.title)+'</h1>'+(STAR[k]?'<div class="badge-star">⭐ อยู่ในหลักสูตรสอบกรมที่ดิน</div>':'')+'<p class="note">'+inline(c.note)+'</p>';
   h+='<a class="btn read-btn" href="#/read/'+k+'">📖 อ่านสรุปเนื้อหาบทนี้</a>';
   [1,2,3].forEach(function(l){
@@ -203,24 +208,24 @@ function viewChap(k){
       s.d===0?'<button class="btn pri" data-act="lv"'+attr+'>เริ่ม'+LVSHORT[l]+' (ข้อ 1–'+s.n+')</button>':
       f<0?'<button class="btn pri" data-act="lvre"'+attr+'>ทำครบแล้ว · เริ่มใหม่ข้อ 1</button>':
       '<button class="btn pri" data-act="lv"'+attr+'>ทำต่อจากข้อ '+(f+1)+'</button>';
-    h+='<div class="lvcard l'+l+'"><div class="lvh"><b>'+LVNAME[l]+'</b><span>'+s.n+' ข้อ</span></div><p>'+LVDESC[l]+'</p>'+
+    h+='<div class="lvcard l'+l+'"><div class="lvh"><b>'+LVNAME[l]+'</b><span>'+s.n+' ข้อ</span></div><p>'+(c.b===3?LVDESC3:LVDESC)[l]+'</p>'+
        (s.n?'<div class="kinds">'+esc(kindsLine(B[l]))+'</div>':'')+
        '<div class="lvp">'+bar('l'+l,s.n?s.d/s.n:0)+'<small>ทำแล้ว '+s.d+'/'+s.n+(s.d?' · ถูก '+pct(s.ok,s.d)+'%':'')+'</small></div>'+
        '<div class="lvbtns">'+main+'<button class="btn" data-act="lvpick"'+attr+'>☰ เลือกข้อ</button></div></div>';
   });
   h+='<div class="row2"><button class="btn" data-act="lv" data-k="'+k+'" data-lv="0">ทำทุกด่านต่อกัน ('+chAll(k).length+' ข้อ)</button>'+(wrong.length?'<button class="btn" data-act="wrongch" data-k="'+k+'">🔁 ทบทวนข้อผิด ('+wrong.length+')</button>':'')+'</div>';
-  h+='<div class="cnav">'+(prev?'<a class="btn sm" href="#/ch/'+prev.k+'">‹ เล่ม '+prev.b+' บท '+prev.c+'</a>':'')+(next?'<a class="btn sm" href="#/ch/'+next.k+'">เล่ม '+next.b+' บท '+next.c+' ›</a>':'')+'</div>';
+  h+='<div class="cnav">'+(prev?'<a class="btn sm" href="#/ch/'+prev.k+'">‹ '+bk(prev.b)+' บท '+prev.c+'</a>':'')+(next?'<a class="btn sm" href="#/ch/'+next.k+'">'+bk(next.b)+' บท '+next.c+' ›</a>':'')+'</div>';
   app.innerHTML=h+'</div>';
 }
 function viewRead(k){
   var c=CHK[k];if(!c){go('#/');return;}
   var r=md(SUM[k]),idx=CH.indexOf(c),next=CH[idx+1];
-  var h=top('#/ch/'+k,'สรุปเนื้อหา · เล่ม '+c.b+' บท '+c.c)+'<div class="wrap">';
+  var h=top('#/ch/'+k,'สรุปเนื้อหา · '+bk(c.b)+' บท '+c.c)+'<div class="wrap">';
   h+='<h1 class="ch1">บทที่ '+c.c+' '+esc(c.title)+'</h1>'+(STAR[k]?'<div class="badge-star">⭐ อยู่ในหลักสูตรสอบกรมที่ดิน</div>':'');
   if(r.toc.length)h+='<div class="toc">'+r.toc.map(function(t){return '<button data-sc="'+t.id+'">'+esc(t.t.replace(/\*\*/g,''))+'</button>';}).join('')+'</div>';
   h+='<article class="md">'+r.html+'</article>';
   h+='<div class="row2" style="margin-top:22px"><button class="btn pri" data-act="lv" data-k="'+k+'" data-lv="1">อ่านจบแล้ว เริ่มด่าน 1</button><a class="btn" href="#/ch/'+k+'">ไปหน้าบทนี้</a></div>';
-  if(next)h+='<div class="cnav"><a class="btn sm" href="#/read/'+next.k+'">สรุปบทถัดไป: เล่ม '+next.b+' บท '+next.c+' ›</a></div>';
+  if(next)h+='<div class="cnav"><a class="btn sm" href="#/read/'+next.k+'">สรุปบทถัดไป: '+bk(next.b)+' บท '+next.c+' ›</a></div>';
   app.innerHTML=h+'</div>';
 }
 
@@ -232,7 +237,7 @@ function startLevel(k,lv,mode){ // mode: undefined = resume, 'restart' = from qu
   if(!pool.length){toast('ไม่มีข้อสอบ');return;}
   var at=0;
   if(mode!=='restart'){var f=firstUndone(pool);at=f<0?0:f;}
-  startPrac(pool.map(function(q){return q.id;}),'เล่ม '+c.b+' บท '+c.c+' · '+(lv?LVSHORT[lv]:'ทุกด่าน'),'#/ch/'+k,function(){startLevel(k,lv,'restart');},at,mode==='pick');
+  startPrac(pool.map(function(q){return q.id;}),''+bk(c.b)+' บท '+c.c+' · '+(lv?LVSHORT[lv]:'ทุกด่าน'),'#/ch/'+k,function(){startLevel(k,lv,'restart');},at,mode==='pick');
   if(at>0&&mode!=='pick')toast('ทำต่อจากข้อ '+(at+1)+' · กด "เลือกข้อ" เพื่อไปข้อไหนก็ได้');
 }
 function startPrac(ids,title,back,redo,at,grid){SES={ids:ids,i:at||0,ans:{},title:title,back:back,redo:redo,grid:!!grid};go('#/quiz');}
@@ -285,7 +290,7 @@ function viewReview(tab){
   h+='<button class="btn pri full" data-act="revall" data-tab="'+tab+'">ทำทั้งหมดเรียงตามลำดับ ('+list.length+' ข้อ)</button>';
   var byc={};list.forEach(function(q){(byc[q._k]=byc[q._k]||[]).push(q);});
   h+='<div class="sec"><h2>แยกตามบท</h2></div><div class="row2">';
-  CH.forEach(function(c){if(byc[c.k])h+='<button class="chip" data-act="revch" data-tab="'+tab+'" data-k="'+c.k+'">เล่ม '+c.b+' บท '+c.c+' · '+byc[c.k].length+'</button>';});
+  CH.forEach(function(c){if(byc[c.k])h+='<button class="chip" data-act="revch" data-tab="'+tab+'" data-k="'+c.k+'">'+bk(c.b)+' บท '+c.c+' · '+byc[c.k].length+'</button>';});
   h+='</div><div class="sec"><h2>รายการ</h2><small>แตะเพื่อดูเฉลย</small></div>';
   list.slice(0,150).forEach(function(q,j){h+=reviewItem(q,j+1,undefined,false);});
   if(list.length>150)h+='<p class="muted">แสดง 150 ข้อแรก</p>';
@@ -345,18 +350,19 @@ function doSearch(){
 
 /* ---------- mock exam ---------- */
 function wsample(pool,n,wf){return pool.map(function(q){return {q:q,k:Math.pow(Math.random(),1/wf(q))};}).sort(function(a,b){return b.k-a.k;}).slice(0,n).map(function(x){return x.q;});}
-function buildMock(n){
-  var counts=GROUPS.map(function(g){return Math.floor(n*g.w/100);}),sum=counts.reduce(function(a,b){return a+b;},0);
-  var order=GROUPS.map(function(g,i){return {i:i,f:n*g.w/100-counts[i]};}).sort(function(a,b){return b.f-a.f;});
+function buildMock(n,G){
+  G=G||GROUPS;
+  var counts=G.map(function(g){return Math.floor(n*g.w/100);}),sum=counts.reduce(function(a,b){return a+b;},0);
+  var order=G.map(function(g,i){return {i:i,f:n*g.w/100-counts[i]};}).sort(function(a,b){return b.f-a.f;});
   for(var j=0;sum<n;j++,sum++)counts[order[j%order.length].i]++;
   var W={1:1,2:1.6,3:2.2},ids=[];
-  GROUPS.forEach(function(g,gi){
+  G.forEach(function(g,gi){
     var pool=[];g.chs.forEach(function(k){pool=pool.concat(chAll(k));});
     ids=ids.concat(wsample(pool,counts[gi],function(q){return W[q.lv]*(isDone(q)?0.6:1);}).map(function(q){return q.id;}));
   });
   return shuffle(ids);
 }
-function startMock(ids,title,min,back){MOCK={ids:ids,i:0,ans:{},flag:{},title:title,dur:min*60000,start:Date.now(),end:Date.now()+min*60000,state:'run',grid:false,back:back||'#/mock',rv:'wrong'};go('#/mock');}
+function startMock(ids,title,min,back,kind){MOCK={kind:kind||'ltd',ids:ids,i:0,ans:{},flag:{},title:title,dur:min*60000,start:Date.now(),end:Date.now()+min*60000,state:'run',grid:false,back:back||'#/mock',rv:'wrong'};go('#/mock');}
 function viewMock(){
   if(MOCK&&MOCK.state==='run')return mockRun();
   if(MOCK&&MOCK.state==='done')return mockResult();
@@ -367,6 +373,15 @@ function viewMock(){
     '<div class="sizes">'+[[25,30],[50,60],[100,120]].map(function(s){return '<button class="btn'+(s[0]===50?' pri':'')+'" data-act="mstart" data-n="'+s[0]+'" data-min="'+s[1]+'"><span>'+s[0]+' ข้อ</span><small>เวลา '+s[1]+' นาที</small></button>';}).join('')+'</div>'+
     '<p class="warnbox">ข้อสอบจริงของกรมที่ดินยังมีส่วน <b>ความรู้เกี่ยวกับกรมที่ดิน</b> ซึ่งไม่มีในคลังนี้ ชุดจำลองนี้จึงวัดได้เฉพาะส่วนความรู้คอมพิวเตอร์</p>';
   if(S.hist.length){h+='<div class="sec"><h2>ประวัติการสอบ</h2></div><div class="card hist">'+S.hist.slice(0,15).map(function(r){var d=new Date(r.t);return '<div><span>'+d.toLocaleDateString('th-TH',{day:'numeric',month:'short'})+' '+d.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})+' · '+esc(r.title)+'</span><b>'+r.ok+'/'+r.n+' ('+pct(r.ok,r.n)+'%)</b></div>';}).join('')+'</div>';}
+  app.innerHTML=h+'</div>';
+}
+function viewMockMof(){
+  if(MOCK&&MOCK.state==='run'){go('#/mock');return;}
+  var h=top('#/','จำลองสอบกระทรวงการคลัง')+'<div class="wrap"><h1 class="ch1">จำลองสอบ นักวิชาการคอมพิวเตอร์ กระทรวงการคลัง</h1>'+
+    '<p>สุ่มข้อสอบจากชุด 3 ตามสัดส่วน 7 หมวดในคู่มือเตรียมสอบ (สนามจริงเป็นปรนัย 100 ข้อ 200 คะแนน) ให้น้ำหนักข้อยากและข้อที่ยังไม่เคยทำมากกว่า ระหว่างทำจะไม่เฉลย</p>'+
+    '<div class="tbl"><table class="gt"><thead><tr><th>หมวด</th><th>สัดส่วน</th></tr></thead><tbody>'+
+    MOFG.map(function(g){return '<tr><td>'+esc(g.name)+'</td><td>'+g.w+'%</td></tr>';}).join('')+'</tbody></table></div>'+
+    '<div class="sizes">'+[[25,30],[50,60],[100,120]].map(function(s){return '<button class="btn'+(s[0]===100?' pri':'')+'" data-act="mstart" data-g="mof" data-n="'+s[0]+'" data-min="'+s[1]+'"><span>'+s[0]+' ข้อ</span><small>เวลา '+s[1]+' นาที</small></button>';}).join('')+'</div>';
   app.innerHTML=h+'</div>';
 }
 function mockRun(){
@@ -387,9 +402,10 @@ function submitMock(timeout){
   var M=MOCK;if(!M||M.state!=='run')return;
   var un=M.ids.length-Object.keys(M.ans).length;
   if(!timeout&&!confirm(un?'ยังไม่ได้ตอบ '+un+' ข้อ ต้องการส่งคำตอบเลยหรือไม่?':'ส่งคำตอบ?'))return;
-  var g=GROUPS.map(function(x){return {name:x.name,n:0,ok:0};}),ok=0;
+  var mof=M.kind==='mof',G=mof?MOFG:GROUPS,GO=mof?GOFM:GOF;
+  var g=G.map(function(x){return {name:x.name,n:0,ok:0};}),ok=0;
   var items=[];
-  M.ids.forEach(function(id){var q=BYID[id],a=M.ans[id],gi=GOF[q._k];g[gi].n++;if(a!==undefined){var c=record(q,a);items.push({qid:id,choice:a,correct:c,mode:'mock'});if(c){ok++;g[gi].ok++;}}});
+  M.ids.forEach(function(id){var q=BYID[id],a=M.ans[id],gi=GO[q._k];g[gi].n++;if(a!==undefined){var c=record(q,a);items.push({qid:id,choice:a,correct:c,mode:'mock'});if(c){ok++;g[gi].ok++;}}});
   M.res={ok:ok,n:M.ids.length,used:Math.min(Date.now(),M.end)-M.start,groups:g,timeout:!!timeout};
   M.state='done';
   S.hist.unshift({t:Date.now(),title:M.title,n:M.ids.length,ok:ok});S.hist=S.hist.slice(0,30);save();
@@ -424,6 +440,7 @@ function route(){
     case 'sets':viewSets();break;
     case 'search':viewSearch();break;
     case 'mock':viewMock();break;
+    case 'mockmof':viewMockMof();break;
     default:viewHome();
   }
   if(!keep)window.scrollTo(0,0);
@@ -437,17 +454,17 @@ var ACT={
   pjump:function(t){SES.i=+t.dataset.i;SES.grid=false;viewQuiz();window.scrollTo(0,0);},
   pprev:function(){if(SES.i>0){SES.i--;viewQuiz();window.scrollTo(0,0);}},
   pfinish:function(){go('#/result');},
-  wrongch:function(t){var k=t.dataset.k,l=chAll(k).filter(isWrong);startPrac(l.map(function(q){return q.id;}),'ทบทวนข้อผิด · เล่ม '+CHK[k].b+' บท '+CHK[k].c,'#/ch/'+k,null);},
+  wrongch:function(t){var k=t.dataset.k,l=chAll(k).filter(isWrong);startPrac(l.map(function(q){return q.id;}),'ทบทวนข้อผิด · '+bk(CHK[k].b)+' บท '+CHK[k].c,'#/ch/'+k,null);},
   next:function(){pracNext();},
   bm:function(){var q=BYID[SES.ids[SES.i]];if(S.bm[q.id])delete S.bm[q.id];else S.bm[q.id]=1;save();api('bookmark',{qid:q.id,on:!!S.bm[q.id]});viewQuiz();},
   redo:function(){if(SES&&SES.redo)SES.redo();},
   redowrong:function(){var w=SES.ids.filter(function(id){var a=SES.ans[id];return a!==undefined&&a!==BYID[id].a;});startPrac(w,'ทำข้อผิดอีกรอบ',SES.back,null);},
   revall:function(t){var l=revList(t.dataset.tab);startPrac(l.map(function(q){return q.id;}),t.dataset.tab==='bm'?'ทบทวนข้อที่เก็บไว้':'ทบทวนข้อผิดทั้งหมด','#/review'+(t.dataset.tab==='bm'?'/bm':''),null);},
-  revch:function(t){var k=t.dataset.k,l=revList(t.dataset.tab,k);startPrac(l.map(function(q){return q.id;}),'ทบทวน · เล่ม '+CHK[k].b+' บท '+CHK[k].c,'#/review'+(t.dataset.tab==='bm'?'/bm':''),null);},
+  revch:function(t){var k=t.dataset.k,l=revList(t.dataset.tab,k);startPrac(l.map(function(q){return q.id;}),'ทบทวน · '+bk(CHK[k].b)+' บท '+CHK[k].c,'#/review'+(t.dataset.tab==='bm'?'/bm':''),null);},
   setp:function(t){var s=buildSets()[+t.dataset.i];startPrac(s.ids.slice(),s.name,'#/sets',null);},
   setm:function(t){var s=buildSets()[+t.dataset.i];if(MOCK&&MOCK.state==='run'&&!confirm('มีการสอบที่ยังทำค้างอยู่ จะเริ่มชุดใหม่แทนหรือไม่?'))return;startMock(s.ids.slice(),s.name,Math.max(5,Math.round(s.ids.length*1.2)),'#/sets');},
   srquiz:function(){startPrac(SR.slice(0,50).map(function(q){return q.id;}),'ข้อที่ค้นเจอ: '+lastSearch,'#/search',null);},
-  mstart:function(t){var n=+t.dataset.n;startMock(buildMock(n),'จำลองสอบกรมที่ดิน '+n+' ข้อ',+t.dataset.min);},
+  mstart:function(t){var n=+t.dataset.n;if(t.dataset.g==='mof')startMock(buildMock(n,MOFG),'จำลองสอบกระทรวงการคลัง '+n+' ข้อ',+t.dataset.min,'#/mockmof','mof');else startMock(buildMock(n),'จำลองสอบกรมที่ดิน '+n+' ข้อ',+t.dataset.min);},
   mflag:function(){var id=MOCK.ids[MOCK.i];if(MOCK.flag[id])delete MOCK.flag[id];else MOCK.flag[id]=1;mockRun();},
   mgrid:function(){MOCK.grid=!MOCK.grid;mockRun();if(MOCK.grid){var g=document.getElementById('gridcard');if(g)g.scrollIntoView({behavior:'smooth',block:'nearest'});}},
   mjump:function(t){MOCK.i=+t.dataset.i;mockRun();window.scrollTo(0,0);},
