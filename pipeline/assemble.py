@@ -171,7 +171,7 @@ def main():
     json.dump(sorted(used_imgs), open(os.path.join(HERE, 'used_imgs.json'), 'w', encoding='utf-8'))
     cnt = collections.Counter((q['b'], q['c'], q['lv']) for q in out)
     print('total', len(out), 'images', len(used_imgs))
-    for b in (1, 2):
+    for b in (1, 2, 3):
         for c in range(1, 12):
             row = [cnt.get((b, c, lv), 0) for lv in (1, 2, 3)]
             if sum(row):

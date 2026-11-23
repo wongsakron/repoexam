@@ -1,7 +1,7 @@
 """Export the question bank and summaries into the Next.js app (web/public/data, web/public/img)."""
 import hashlib, json, os, shutil, sys
 
-from site_meta import HERE, STAR, GROUPS, load_chapters, slim_questions
+from site_meta import HERE, STAR, GROUPS, MOF_GROUPS, load_chapters, slim_questions
 
 WEB = os.path.normpath(os.path.join(HERE, '..', 'web'))
 DATA_DIR = os.path.join(WEB, 'public', 'data')
@@ -32,7 +32,7 @@ def main():
             assert n in used, (q['id'], n)
 
     h = hashlib.sha1()
-    for name, obj in (('meta.json', {'chapters': chapters, 'star': STAR, 'groups': GROUPS}),
+    for name, obj in (('meta.json', {'chapters': chapters, 'star': STAR, 'groups': GROUPS, 'mof_groups': MOF_GROUPS}),
                       ('sum.json', summ), ('q.json', Q)):
         h.update(dump(name, obj).encode('utf-8'))
     version = h.hexdigest()[:10]

@@ -23,9 +23,11 @@ for (const q of Q) {
   }
 }
 for (const k of keys) if (!sum[k]) errors.push(`missing summary for chapter ${k}`);
-const grouped = meta.groups.flatMap((g) => g.chs).sort();
+const mofGroups = meta.mof_groups || [];
+const grouped = [...meta.groups, ...mofGroups].flatMap((g) => g.chs).sort();
 if (JSON.stringify(grouped) !== JSON.stringify([...keys].sort())) errors.push('mock groups must cover every chapter once');
 if (meta.groups.reduce((s, g) => s + g.w, 0) !== 100) errors.push('mock group weights must sum to 100');
+if (mofGroups.length && mofGroups.reduce((s, g) => s + g.w, 0) !== 100) errors.push('MoF mock group weights must sum to 100');
 
 if (errors.length) {
   console.error(errors.slice(0, 50).join('\n'));

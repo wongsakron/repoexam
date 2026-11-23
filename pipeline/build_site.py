@@ -1,7 +1,7 @@
 """Build the offline single-file HTML (everything embedded, opens via file://)."""
 import json, os, base64, sys
 
-from site_meta import HERE, STAR, GROUPS, load_chapters, slim_questions
+from site_meta import HERE, STAR, GROUPS, MOF_GROUPS, load_chapters, slim_questions
 
 OUT_DIR = os.path.join(HERE, '..', 'dist')
 OUT = os.path.join(OUT_DIR, 'ติวนักวิชาการคอม กรมที่ดิน.html')
@@ -21,7 +21,7 @@ def main():
         for n in q.get('im', []):
             assert n in img, (q['id'], n)
 
-    meta = {'chapters': chapters, 'star': STAR, 'groups': GROUPS}
+    meta = {'chapters': chapters, 'star': STAR, 'groups': GROUPS, 'mof_groups': MOF_GROUPS}
 
     def blk(i, obj):
         s = json.dumps(obj, ensure_ascii=False, separators=(',', ':')).replace('</', '<\\/')
