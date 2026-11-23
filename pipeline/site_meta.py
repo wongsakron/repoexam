@@ -18,7 +18,7 @@ GROUPS = [
     {'name': 'อื่นๆ (ไฟล์ กราฟิก เลขฐาน สื่อการสอน วิทยาการคำนวณ)', 'chs': ['1-2', '1-3', '1-6', '1-10', '2-8'], 'w': 5},
 ]
 
-# ชุด 3: แนวสอบกระทรวงการคลัง — one chapter per exam area, weights from the
+# เล่ม 3: แนวสอบกระทรวงการคลัง — one chapter per exam area, weights from the
 # mid-point of the ranges in the MoF preparation guide (must sum to 100)
 MOF_GROUPS = [
     {'name': 'หมวด 1 เครือข่ายและความมั่นคงปลอดภัยไซเบอร์', 'chs': ['3-1'], 'w': 23},

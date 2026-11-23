@@ -54,6 +54,8 @@ function isWrong(q){var r=S.p[q.id];return !!r&&r[0]===0;}
 function stat(list){var d=0,ok=0;for(var i=0;i<list.length;i++){var r=S.p[list[i].id];if(r){d++;if(r[0])ok++;}}return {n:list.length,d:d,ok:ok};}
 function pct(a,b){return b?Math.round(a/b*100):0;}
 function chAll(k){var B=BYCH[k];return B[1].concat(B[2],B[3]);}
+function b3Ids(){var r=[];CH.forEach(function(c){if(c.b===3)r=r.concat(chAll(c.k).map(function(q){return q.id;}));});return r;}
+function startB3(mode){var ids=b3Ids(),at=0;if(mode!=='restart'){at=ids.findIndex(function(id){return !isDone(BYID[id]);});if(at<0)at=0;}startPrac(ids,'เล่ม 3 · ไล่ทำทั้งเล่ม','#/',function(){startB3('restart');},at);}
 
 /* ---------- helpers ---------- */
 var app=document.getElementById('app');
@@ -62,7 +64,7 @@ function shuffle(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(M
 function go(h){if(location.hash===h)route();else location.hash=h;}
 function toast(msg){var t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(function(){t.remove();},2200);}
 function top(back,title,extra){return '<div class="top"><a class="back" href="'+back+'" aria-label="ย้อนกลับ">‹</a><div class="tt">'+esc(title)+'</div>'+(extra||'')+'</div>';}
-function bk(b){return b===3?'ชุดคลัง':'เล่ม '+b;}
+function bk(b){return 'เล่ม '+b;}
 function chapLabel(q){return bk(q.b)+' บท '+q.c;}
 function srcLabel(q){return q.src+(q.page?' · หน้า '+q.page:'');}
 function fmt(ms){ms=Math.max(0,ms);var s=Math.floor(ms/1000),h=Math.floor(s/3600),m=Math.floor(s%3600/60);s=s%60;var p=function(x){return (x<10?'0':'')+x;};return (h?h+':'+p(m):m)+':'+p(s);}
@@ -174,10 +176,14 @@ function viewHome(){
      '<p class="muted" style="font-size:.88rem;margin:0">ความคืบหน้าบันทึกลงฐานข้อมูลบนเซิร์ฟเวอร์ เปิดจากมือถือหรือคอมเครื่องไหนก็เห็นความคืบหน้าเดียวกัน</p></details>';
   h+='<div class="row2" style="margin:14px 0 0"><button class="chip'+(S.o.fs?' on':'')+'" data-act="fs">⭐ แสดงเฉพาะบทในหลักสูตรกรมที่ดิน</button></div>';
   [1,2,3].forEach(function(b){
-    var list=CH.filter(function(c){return c.b===b&&(!S.o.fs||STAR[c.k]);});
+    var list=CH.filter(function(c){return c.b===b&&(b===3||!S.o.fs||STAR[c.k]);});
     var cnt=0;CH.forEach(function(c){if(c.b===b)cnt+=chAll(c.k).length;});
-    h+='<div class="sec"><h2>'+(b===3?'ชุด 3 · แนวสอบกระทรวงการคลัง':'เล่ม '+b)+'</h2><small>'+cnt.toLocaleString()+' ข้อ</small></div>';
-    if(b===3&&MOFG.length)h+='<a class="btn full" style="margin:0 0 10px" href="#/mockmof">⏱️ จำลองสอบกระทรวงการคลัง · สุ่มตามสัดส่วน 7 หมวด</a>';
+    h+='<div class="sec"><h2>'+(b===3?'เล่ม 3 · แนวสอบกระทรวงการคลัง':'เล่ม '+b)+'</h2><small>'+cnt.toLocaleString()+' ข้อ</small></div>';
+    if(b===3){
+      var b3=b3Ids(),f=b3.findIndex(function(id){return !isDone(BYID[id]);}),d3=b3.filter(function(id){return isDone(BYID[id]);}).length;
+      h+='<div class="row2" style="margin:0 0 10px"><button class="btn pri" data-act="b3all">📘 '+(d3===0?'ไล่ทำทีละข้อทั้งเล่ม ('+b3.length+' ข้อ)':f<0?'ทำครบแล้ว · ไล่ทำใหม่ตั้งแต่ข้อ 1':'ไล่ทำต่อจากข้อ '+(f+1)+' / '+b3.length)+'</button>'+
+         (MOFG.length?'<a class="btn" href="#/mockmof">⏱️ จำลองสอบกระทรวงการคลัง</a>':'')+'</div>';
+    }
     list.forEach(function(c){h+=chapCard(c);});
   });
   h+='<div class="foot"><b>ตั้งค่า</b>'+
@@ -378,7 +384,7 @@ function viewMock(){
 function viewMockMof(){
   if(MOCK&&MOCK.state==='run'){go('#/mock');return;}
   var h=top('#/','จำลองสอบกระทรวงการคลัง')+'<div class="wrap"><h1 class="ch1">จำลองสอบ นักวิชาการคอมพิวเตอร์ กระทรวงการคลัง</h1>'+
-    '<p>สุ่มข้อสอบจากชุด 3 ตามสัดส่วน 7 หมวดในคู่มือเตรียมสอบ (สนามจริงเป็นปรนัย 100 ข้อ 200 คะแนน) ให้น้ำหนักข้อยากและข้อที่ยังไม่เคยทำมากกว่า ระหว่างทำจะไม่เฉลย</p>'+
+    '<p>สุ่มข้อสอบจากเล่ม 3 ตามสัดส่วน 7 หมวดในคู่มือเตรียมสอบ (สนามจริงเป็นปรนัย 100 ข้อ 200 คะแนน) ให้น้ำหนักข้อยากและข้อที่ยังไม่เคยทำมากกว่า ระหว่างทำจะไม่เฉลย</p>'+
     '<div class="tbl"><table class="gt"><thead><tr><th>หมวด</th><th>สัดส่วน</th></tr></thead><tbody>'+
     MOFG.map(function(g){return '<tr><td>'+esc(g.name)+'</td><td>'+g.w+'%</td></tr>';}).join('')+'</tbody></table></div>'+
     '<div class="sizes">'+[[25,30],[50,60],[100,120]].map(function(s){return '<button class="btn'+(s[0]===100?' pri':'')+'" data-act="mstart" data-g="mof" data-n="'+s[0]+'" data-min="'+s[1]+'"><span>'+s[0]+' ข้อ</span><small>เวลา '+s[1]+' นาที</small></button>';}).join('')+'</div>';
@@ -464,6 +470,7 @@ var ACT={
   setp:function(t){var s=buildSets()[+t.dataset.i];startPrac(s.ids.slice(),s.name,'#/sets',null);},
   setm:function(t){var s=buildSets()[+t.dataset.i];if(MOCK&&MOCK.state==='run'&&!confirm('มีการสอบที่ยังทำค้างอยู่ จะเริ่มชุดใหม่แทนหรือไม่?'))return;startMock(s.ids.slice(),s.name,Math.max(5,Math.round(s.ids.length*1.2)),'#/sets');},
   srquiz:function(){startPrac(SR.slice(0,50).map(function(q){return q.id;}),'ข้อที่ค้นเจอ: '+lastSearch,'#/search',null);},
+  b3all:function(){startB3();},
   mstart:function(t){var n=+t.dataset.n;if(t.dataset.g==='mof')startMock(buildMock(n,MOFG),'จำลองสอบกระทรวงการคลัง '+n+' ข้อ',+t.dataset.min,'#/mockmof','mof');else startMock(buildMock(n),'จำลองสอบกรมที่ดิน '+n+' ข้อ',+t.dataset.min);},
   mflag:function(){var id=MOCK.ids[MOCK.i];if(MOCK.flag[id])delete MOCK.flag[id];else MOCK.flag[id]=1;mockRun();},
   mgrid:function(){MOCK.grid=!MOCK.grid;mockRun();if(MOCK.grid){var g=document.getElementById('gridcard');if(g)g.scrollIntoView({behavior:'smooth',block:'nearest'});}},
